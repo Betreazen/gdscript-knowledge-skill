@@ -1,13 +1,13 @@
 ---
 name: gdscript-knowledge
-description: Knowledge base and workflow for working with the Godot 4 engine and GDScript — correct and optimized use of scenes, nodes and the scene tree, signals, resources and asset import, 2D/3D rendering, physics and navigation, UI and input, animation and audio, project settings and export. Covers 2D and 3D games, UI and non-game apps, card and turn-based games, AI, procedural generation, editor plugins, multiplayer, shaders, web and mobile, and C#/GDExtension (godot-rust) interop. Use when writing or reviewing GDScript, structuring scenes and nodes, choosing node types, configuring imports, renderers, physics bodies, containers, AnimationTree or audio buses, setting up exports, choosing Godot tooling (headless CLI, --check-only, GUT, gdUnit4, CI), profiling or optimizing Godot performance, or picking Godot books and courses. Includes curated docs and articles, engine behaviour verified on Godot 4.7.2, check and benchmark scripts, and a pipeline with benchmarks, review and evidence-based optimization.
+description: Knowledge base and workflow for the Godot 4 engine and GDScript: scenes, nodes and the scene tree, signals, resources and import, 2D/3D rendering, physics, navigation, UI, input, animation, audio, project settings, export, and a catalog of addons and plugins. Covers 2D/3D games, UI apps, card and turn-based games, AI, procgen, editor plugins, multiplayer, shaders, web, mobile, C# and GDExtension (godot-rust). Use when writing or reviewing GDScript, structuring scenes, choosing nodes or engine settings, picking, vetting or installing Godot addons (Asset Store, Dialogue Manager, LimboAI, Phantom Camera, Terrain3D, netfox, GodotSteam), connecting AI agents to Godot (MCP servers, headless CLI, LSP), setting up tooling (GUT, gdUnit4, CI), profiling or optimizing Godot, or picking books and courses. Includes docs and addons verified on Godot 4.7.2, script-check, addon-smoke and benchmark scripts, and a pipeline with tests, review and evidence-based optimization.
 ---
 
 # Godot 4 и GDScript: библиотека знаний и пайплайн
 
-Скилл помогает правильно работать с движком Godot и писать, проверять и ускорять код на GDScript в любой области: игры, интерфейсы, инструменты редактора, приложения на Godot. Он охватывает не только язык, но и сам движок: как строить сцены и дерево узлов, какой узел выбрать, как настроить импорт, рендеринг, физику, UI, анимацию, звук и экспорт. Внутри три вещи:
+Скилл помогает правильно работать с движком Godot и писать, проверять и ускорять код на GDScript в любой области: игры, интерфейсы, инструменты редактора, приложения на Godot. Он охватывает не только язык, но и сам движок: как строить сцены и дерево узлов, какой узел выбрать, как настроить импорт, рендеринг, физику, UI, анимацию, звук и экспорт, — и экосистему аддонов вокруг него. Внутри три вещи:
 
-1. **Библиотека знаний.** Документация, статьи, книги, курсы, доклады, открытые проекты и паттерны по категориям. Каждый источник дан со ссылкой, автором, годом и пояснением, зачем его читать. Поведение движка, отмеченное «проверено на 4.7.2», подтверждено запуском Godot.
+1. **Библиотека знаний.** Документация, статьи, книги, курсы, доклады, открытые проекты, паттерны и каталог примерно из 250 аддонов и инструментов. Каждый источник дан со ссылкой, автором, годом и пояснением, зачем его читать. Поведение движка, отмеченное «проверено на 4.7.2», подтверждено запуском Godot; аддоны с отметкой «✓» установлены в чистый проект и скомпилированы на 4.7.2.
 2. **Тулчейн.** Какие инструменты ставить, какие команды запускать и в каком порядке. Агент работает из терминала, поэтому упор на headless-режим Godot.
 3. **Пайплайн.** Порядок работы: тесты до кода, проверки качества, бенчмарки, ревью, поиск решений в библиотеке и повторный замер.
 
@@ -40,11 +40,20 @@ description: Knowledge base and workflow for working with the Godot 4 engine and
 | Сигналы, `await`, `call_deferred`, потоки, `WorkerThreadPool`, HTTP, мультиплеер и RPC | [references/signals-async-threads.md](references/signals-async-threads.md) |
 | Книги, курсы, каналы, открытые проекты, маршрут обучения | [references/books.md](references/books.md) |
 
+**Аддоны и инструменты для агента**
+
+| Задача | Файл |
+| --- | --- |
+| Как выбирать и ставить аддоны, что уже встроено в движок, стартовые наборы по типу проекта; аддоны игровых систем: ИИ, камера, диалоги, ввод, инвентарь, сохранения, архитектура, физика, процедурка, карточные игры, UI, звук, локализация, сеть, платформы, аналитика | [references/addons.md](references/addons.md) |
+| Аддоны редактора и контента: удобство редактора, отладка в игре, левел-дизайн, шейдеры, VFX, 2D-графика, анимация, 3D-импорт, данные, шаблоны проектов | [references/addons-content.md](references/addons-content.md) |
+| MCP-серверы и CLI-мосты к редактору и игре, документация API без галлюцинаций, LSP, валидаторы сцен, покрытие, автоматизация игры без зрения, сборка и релиз, другие языки, ИИ внутри игры | [references/addons-agent-tools.md](references/addons-agent-tools.md) |
+
 Каждый справочник начинается с оглавления. Читайте только нужный раздел, а не файл целиком.
 
 Готовые скрипты, проверенные на Godot 4.7.2:
 
-- [scripts/check_scripts.sh](scripts/check_scripts.sh) — прогоняет `--check-only` по всем `.gd` проекта;
+- [scripts/check_scripts.sh](scripts/check_scripts.sh) и [scripts/check_scripts.gd](scripts/check_scripts.gd) — компилируют все `.gd` проекта в одном процессе Godot (4.5+); в отличие от цикла по `--check-only`, не дают ложных ошибок на обращения к автозагрузкам;
+- [scripts/addon_smoke.sh](scripts/addon_smoke.sh) — проверяет аддон до установки: чистый проект, включение плагинов как галочкой в редакторе, компиляция всех скриптов аддона;
 - [scripts/bench.gd](scripts/bench.gd) — харнесс микробенчмарков с сохранением результатов в JSON;
 - [scripts/bench_compare.gd](scripts/bench_compare.gd) — сравнение двух прогонов, код 1 при регрессии.
 
@@ -68,6 +77,16 @@ description: Knowledge base and workflow for working with the Godot 4 engine and
 
 **Когда строите сцену или настраиваете систему движка**, сначала откройте справочник этой системы. Выбор узла, тела, контейнера, рендерера, режима сжатия или типа AudioStream делайте по таблицам решений в нём, а не по памяти: у многих узлов неочевидные значения по умолчанию, и часть советов времён Godot 3 больше не верна.
 
+**Когда задачу может закрыть аддон**:
+
+1. Сначала проверьте таблицу «Что уже встроено в движок» в [addons.md](references/addons.md#0-как-выбирать-и-ставить-аддоны): с 4.3–4.7 многие популярные аддоны стали не нужны.
+2. Выбирайте по каталогу. Предпочитайте активные аддоны с данными в тексте и API в коде.
+3. До установки прогоните `GODOT=godot scripts/addon_smoke.sh <git-url>@<тег>`.
+4. Включая плагин строкой в `[editor_plugins]`, допишите в `[autoload]` синглтоны из его `_enable_plugin()`: правка `project.godot` этот метод не вызывает.
+5. Закрепите версию аддона.
+
+Если пользователь хочет подключить агента к живому редактору или игре, смотрите [addons-agent-tools.md](references/addons-agent-tools.md#0-что-выбрать-короткий-маршрут) и предупредите об инструментах, выполняющих произвольный код.
+
 **Перед тем как объявить работу готовой**, прогоните минимальные проверки и покажите их вывод:
 
 ```bash
@@ -77,7 +96,7 @@ GODOT=godot <путь к скиллу>/scripts/check_scripts.sh
 mkdir -p reports && godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://test -ginclude_subdirs -gexit
 ```
 
-`--check-only` ловит ошибки типов, только если в `project.godot` нужные предупреждения переведены в Error. Минимум — `untyped_declaration=2`, шаблон в [toolchain.md](references/toolchain.md). Если тесты на gdUnit4, используйте его `runtest.sh`. Если инструмент не установлен, скажите об этом и предложите команду установки из [toolchain.md](references/toolchain.md), а не пропускайте шаг молча.
+Проверка скриптов ловит ошибки типов, только если в `project.godot` нужные предупреждения переведены в Error. Минимум — `untyped_declaration=2`, шаблон в [toolchain.md](references/toolchain.md). Если тесты на gdUnit4, используйте его `runtest.sh`. Если инструмент не установлен, скажите об этом и предложите команду установки из [toolchain.md](references/toolchain.md), а не пропускайте шаг молча.
 
 Агент не видит игру. То, что нельзя проверить кодом (анимация, ощущение управления, вёрстка UI на разных разрешениях, качество картинки), явно передавайте человеку на ручную проверку со списком, что смотреть.
 

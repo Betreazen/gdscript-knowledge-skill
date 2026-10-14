@@ -1,6 +1,6 @@
 # Прикладные домены GDScript и Godot 4
 
-Справочник по основным областям применения Godot 4 и GDScript, актуально на октябрь 2026: текущий стабильный выпуск — Godot 4.7.2 (август 2026), ветка 4.8 в dev-снапшотах. Для каждого домена — архитектурные и производительные правила, рекомендуемые аддоны и инструменты (в скобках — последняя версия, сверенная с GitHub в октябре 2026) и проверенные ресурсы. Пометка `[устарело]` — API или материал времён Godot 3 (KinematicBody, TileMap и т. п.), `[не проверено]` — факт из памяти, не сверенный с первоисточником. Общая архитектура проекта описана в [architecture.md](architecture.md), идиомы языка — в [idioms-patterns.md](idioms-patterns.md), сигналы, потоки и сеть — в [signals-async-threads.md](signals-async-threads.md).
+Справочник по основным областям применения Godot 4 и GDScript, актуально на октябрь 2026: текущий стабильный выпуск — Godot 4.7.2 (август 2026), ветка 4.8 в dev-снапшотах. Для каждого домена — архитектурные и производительные правила, рекомендуемые аддоны и инструменты (в скобках — последняя версия, сверенная с GitHub в октябре 2026) и проверенные ресурсы. Пометка `[устарело]` — API или материал времён Godot 3 (KinematicBody, TileMap и т. п.), `[не проверено]` — факт из памяти, не сверенный с первоисточником. Полный каталог аддонов с проверкой на 4.7.2 и оценкой удобства для агента — в [addons.md](addons.md), [addons-content.md](addons-content.md) и [addons-agent-tools.md](addons-agent-tools.md). Общая архитектура проекта описана в [architecture.md](architecture.md), идиомы языка — в [idioms-patterns.md](idioms-patterns.md), сигналы, потоки и сеть — в [signals-async-threads.md](signals-async-threads.md).
 
 Ключевые вехи версий, на которые ссылаются разделы:
 - **4.3** (август 2024) — `TileMapLayer` вместо `TileMap`, однопоточный Web-экспорт, интерактивная музыка, Compositor, 2D-интерполяция физики.
@@ -351,7 +351,7 @@
 
 ### Аддоны и инструменты
 - GodotSteam (4.23, октябрь 2026) — Steamworks API.
-- netfox (1.35.3) — rollback, интерполяция и lag compensation.
+- netfox (1.49.4 в `main`; последний релиз на GitHub — 1.35.3) — rollback, интерполяция и lag compensation.
 - GABE — Android Build Environment внутри Godot (4.6+).
 - Встроенные: `MultiplayerAPI`, `ENetMultiplayerPeer`, `WebSocketMultiplayerPeer`, `WebRTCMultiplayerPeer`, `JavaScriptBridge`.
 

@@ -61,7 +61,7 @@
 | `-e`, `--editor` | Запустить редактор | Только сборка редактора |
 | `--import` | Запустить редактор, дождаться импорта и выйти (подразумевает `--editor --quit`) | Код 0 даже при битых скриптах |
 | `-s`, `--script <file>` | Выполнить скрипт (`SceneTree`/`MainLoop`) | Путь трактуется как `res://`, можно абсолютный |
-| `--check-only` | Только распарсить скрипт и выйти (вместе с `--script`) | Код 1 при ошибке, работает для любого скрипта, не только `SceneTree` (проверено) |
+| `--check-only` | Только распарсить скрипт и выйти (вместе с `--script`) | Код 1 при ошибке, работает для любого скрипта, не только `SceneTree` (проверено). Не видит имена автозагрузок — ложная ошибка, см. раздел 2 |
 | `--quit`, `--quit-after <N>` | Выйти после 1-й или N-й итерации | Smoke-тест сцены: `--quit-after 120` |
 | `--scene <path>` | Запустить конкретную сцену | — |
 | `--export-release/--export-debug <preset> <path>` | Экспорт по пресету из `export_presets.cfg` | Нужны шаблоны. Без пресета код 1 (проверено) |
@@ -76,7 +76,7 @@
 | `--gpu-profile`, `--gpu-validation` | Тайминги GPU, слои валидации графического API | — |
 | `--benchmark`, `--benchmark-file <abs.json>` | Замер времени запуска движка | Только редактор. Это не профайлер игры |
 | `--log-file <path>`, `-v/--verbose`, `-q/--quiet`, `--no-header` | Управление выводом | `--quiet` в CI не используйте: он прячет вывод скриптов |
-| `--write-movie <file>`, `--fixed-fps`, `--time-scale` | Детерминированная запись кадров и видео | — |
+| `--write-movie <file>`, `--fixed-fps`, `--time-scale` | Детерминированная запись кадров и видео | Только без `--headless`: с ним на 4.7.2 (Windows) падает с segfault, проверено |
 | `--recovery-mode` | Редактор без потенциально падающих фич | Если проект роняет редактор |
 
 ```bash
@@ -97,6 +97,7 @@ godot --headless --path . --export-release "Linux" build/linux/game.x86_64
 
 **Ключевые выводы**
 - Единственная проверка, которая использует настоящий парсер и анализатор типов Godot, — `godot --headless --path . --check-only --script res://file.gd`. Она возвращает 1 при ошибке парсинга, анализа или предупреждении, переведённом в Error. Сообщение имеет вид `SCRIPT ERROR: Parse Error: ... (Warning treated as error.)` с путём и строкой. Проверка идёт по одному файлу за запуск, поэтому все скрипты прогоняйте в цикле (шаблон ниже). Запуск — доли секунды на файл.
+- **`--check-only` не видит автозагрузки.** Исправный скрипт, который обращается к синглтону по имени (`Foo.x`, где `Foo` объявлен в `[autoload]`), падает с `Compile Error: Identifier not found: Foo` и кодом 1, хотя в игре и через `load()` он компилируется (проверено на 4.7.2). В проекте с автозагрузками цикл по `--check-only` даёт ложные провалы. Проверяйте проект скриптом скилла [scripts/check_scripts.gd](../scripts/check_scripts.gd): он загружает каждый скрипт через `load()` в одном процессе Godot и собирает ошибки компиляции через `Logger` (4.5+). Ловит то же самое (синтаксис, типы, предупреждения уровня Error, необъявленные идентификаторы), не ругается на автозагрузки и `@abstract`-классы и работает быстрее: один запуск движка на 200 файлов (проверено на 4.7.2).
 - Предупреждения уровня Warn в `--check-only` не печатаются вообще (проверено). Строгость в CI обеспечивается только уровнем **Error** в `project.godot`.
 - Предупреждения настраиваются в `debug/gdscript/warnings/*`: 0 = Ignore, 1 = Warn, 2 = Error. По умолчанию выключены именно те, что дают типобезопасность: `untyped_declaration`, `unsafe_property_access`, `unsafe_method_access`, `unsafe_cast`, `unsafe_call_argument`, `return_value_discarded`, `missing_await` (в 4.6+).
 - Для нового проекта ставьте `untyped_declaration = 2` (Error) и включайте подсказку типов в редакторе (`text_editor/completion/add_type_hints`). Группу `unsafe_*` держите на Warn: на Error она требует явных кастов для каждого обращения к `Variant` и `get_node()`.
@@ -104,18 +105,17 @@ godot --headless --path . --export-release "Linux" build/linux/game.x86_64
 - В 4.6+ чужие аддоны исключаются через `debug/gdscript/warnings/directory_rules` (по умолчанию `{"res://addons": 0}` — исключить). Свой аддон включите отдельным правилом. Ключ `exclude_addons` из 4.4–4.5 в 4.6 удалён `[устарело]`. Ключа `treat_warnings_as_errors` из Godot 3 в Godot 4 нет `[устарело]`.
 - Точечное подавление: `@warning_ignore("unused_parameter")` на строку или функцию, `@warning_ignore_start("...")` … `@warning_ignore_restore("...")` на участок.
 
-Готовый вариант этого цикла лежит в скилле: [scripts/check_scripts.sh](../scripts/check_scripts.sh). Он принимает путь к Godot в переменной `GODOT`, каталоги-исключения аргументами (по умолчанию `addons`) и печатает ошибки с файлом и строкой. Проверен на Godot 4.7.2.
+Готовая обёртка лежит в скилле: [scripts/check_scripts.sh](../scripts/check_scripts.sh). Она находит все `.gd` проекта, передаёт их пачками по 200 в [check_scripts.gd](../scripts/check_scripts.gd), принимает путь к Godot в переменной `GODOT`, каталоги-исключения аргументами (по умолчанию `addons`) и печатает ошибки с файлом и строкой. Проверена на Godot 4.7.2. Загрузка скрипта выполняет его статические инициализаторы (`static var`, `_static_init()`), чего `--check-only` не делает.
 
 ```bash
-# Проверка всех скриптов (bash; после --import). Исключите addons/ и .godot/.
-fail=0
-while IFS= read -r -d '' f; do
-  rel="res://${f#./}"
-  if ! out=$(godot --headless --path . --check-only --script "$rel" 2>&1); then
-    echo "::error file=${f#./}::GDScript check failed"; echo "$out" | grep -E "SCRIPT ERROR|ERROR|at:"; fail=1
-  fi
-done < <(find . -name '*.gd' -not -path './.godot/*' -not -path './addons/*' -print0)
-exit $fail
+# Проверка всех скриптов (bash; после --import). check_scripts.gd скопирован в tools/ проекта.
+find . -type f -name '*.gd' -not -path './.godot/*' -not -path './addons/*' -print0 \
+  | sed -z 's|^\./|res://|' \
+  | xargs -0 -r -n 200 godot --headless --path . -s res://tools/check_scripts.gd --
+# xargs возвращает 123, если хоть одна пачка не прошла
+
+# Один файл, в котором нет обращений к автозагрузкам:
+godot --headless --path . --check-only --script res://src/player.gd
 ```
 
 | Ресурс | Автор, год | Зачем читать |
@@ -132,7 +132,7 @@ exit $fail
 - gdtoolkit (gdformat, gdlint, gdparse, gdradon) зрелый, но последний релиз 4.5.0 вышел в октябре 2025, и коммитов с тех пор не было. Синтаксис 4.5 (`@abstract`, вариадические `...args`) он понимает (проверено). На свежий синтаксис 4.6–4.7 есть открытые баги (#424, #430). Используйте его ради `gdlint` с настраиваемыми регулярками имён и ради `gdradon` (цикломатическая сложность).
 - Не запускайте два форматтера на одних файлах: их стили расходятся (переносы, пустые строки). Выберите один, второй используйте только как линтер.
 - Форматтер может испортить код. Запускайте его на чистом рабочем дереве под git. В CI используйте только `--check`; у GDQuest для массовых прогонов есть `--verify-structure`.
-- Ни один внешний линтер не знает типов движка. Ошибки вроде несуществующего метода ловит только `--check-only` (раздел 2).
+- Ни один внешний линтер не знает типов движка. Ошибки вроде несуществующего метода ловит только компилятор Godot: `check_scripts.sh` или `--check-only` (раздел 2).
 
 | Инструмент | Что и зачем | Установка | Главные команды | Оговорки |
 |---|---|---|---|---|
@@ -236,7 +236,9 @@ timeout 600 godot --headless --path . -s addons/gut/gut_cmdln.gd \
 - Источники аддонов: **Godot Asset Store** (store.godotengine.org, магазин Godot Foundation для бесплатных и платных ассетов и аддонов), старая Godot Asset Library (пока онлайн, но store её преемник) и git. В 4.7 Asset Store встроен в редактор: вкладка Asset Store в главном экране рядом с 2D, 3D и Script, шаблоны проектов — во вкладке Asset Store менеджера проектов. Ассеты из Asset Library автоматически не перенесены ([About the Asset Store](https://docs.godotengine.org/en/stable/community/asset_store/what_is_asset_store.html)).
 - В Godot нет штатного менеджера зависимостей с lock-файлом. Варианты: коммитить `addons/` целиком (проще всего и воспроизводимо), git submodule на конкретный тег, gd-plug (`plug.gd` в корне), GodotEnv (`addons.json`).
 - Коммитьте `plugin.cfg` и включённые плагины в `project.godot` (`[editor_plugins] enabled=...`). Аддон-раннер тестов (GUT, gdUnit4) тоже коммитьте, тогда CI не скачивает его.
-- Чужие аддоны исключайте из предупреждений (`directory_rules`), из форматтера и линтера (`-x addons`) и из `--check-only`.
+- Чужие аддоны исключайте из предупреждений (`directory_rules`), из форматтера и линтера (`-x addons`) и из проверки скриптов (`check_scripts.sh` по умолчанию пропускает `addons/`).
+- Каталог аддонов с версиями, совместимостью с 4.7.2 и оценкой удобства для агента — в [addons.md](addons.md), [addons-content.md](addons-content.md) и [addons-agent-tools.md](addons-agent-tools.md). Перед установкой проверьте аддон в чистом проекте: `GODOT=godot scripts/addon_smoke.sh <git-url>[@тег]`.
+- Включение плагина строкой в `[editor_plugins]` не вызывает его `_enable_plugin()`, поэтому автозагрузки, которые плагин регистрирует там, не появятся (проверено на 4.7.2). Допишите их в `[autoload]` сами или включите плагин галочкой в редакторе.
 
 | Инструмент | Что и зачем | Главные команды | Оговорки |
 |---|---|---|---|
@@ -330,27 +332,29 @@ timeout 600 godot --headless --path . -s addons/gut/gut_cmdln.gd \
 ## 12. MCP-серверы для ИИ-агентов
 
 **Ключевые выводы**
-- Официального MCP-сервера от Godot Foundation на октябрь 2026 нет. Сообщество делает два вида серверов: обёртки над CLI (запуск, захват вывода, операции со сценами через GDScript) и плагины внутри редактора (полный доступ к открытой сцене, инспектору, вводу).
-- Самый популярный — Coding-Solo/godot-mcp (около 6 тыс. звёзд, MIT, последний коммит в апреле 2026). Он умеет запускать редактор и проект, собирать debug-вывод, создавать сцены и ноды, работать с UID (4.4+). Подключение к Claude Code: `claude mcp add godot -- npx @coding-solo/godot-mcp`, путь к Godot передаётся в `GODOT_PATH`.
-- MCP не заменяет quality gates. Проверка, тесты и экспорт — это CLI-команды из разделов 1–5, их агент запускает напрямую. MCP полезен для интерактивной работы со сценами и живой игрой. Плагины внутри редактора исполняют код с правами редактора: ставьте только проверенные и не давайте им доступ к секретам.
+- Официального MCP-сервера от Godot Foundation на октябрь 2026 нет. Серверов сообщества больше двадцати; полное сравнение, подключение к Claude Code и правила безопасности — в [addons-agent-tools.md](addons-agent-tools.md#3-mcp-серверы).
+- MCP не заменяет quality gates. Проверка, тесты и экспорт — это CLI-команды из разделов 1–5, их агент запускает напрямую. MCP полезен для интерактивной работы со сценами и живой игрой.
+- Инструменты вида `execute_*`, `game_eval`, `run_script` выполняют произвольный код с правами пользователя: держите их в `ask` или `deny`. Фиксируйте версии `npx`-пакетов.
 
-| Сервер | Тип | Статус на октябрь 2026 |
+| Сервер | Когда брать | Статус на 14.10.2026 |
 |---|---|---|
-| [Coding-Solo/godot-mcp](https://github.com/Coding-Solo/godot-mcp) | CLI-обёртка (Node, npx) | около 6 тыс. ★, активен до апреля 2026 |
-| [youichi-uda/godot-mcp-pro](https://github.com/youichi-uda/godot-mcp-pro) | Плагин и сервер, более 160 инструментов | Активен (сентябрь 2026) |
-| [3ddelano/gdai-mcp-plugin-godot](https://github.com/3ddelano/gdai-mcp-plugin-godot) | Плагин редактора (GDAI MCP) | Активен (сентябрь 2026) |
-| ee0pdt/Godot-MCP | Плагин и сервер | [устарело] Последний коммит в марте 2025 |
+| [hi-godot/godot-ai](https://github.com/hi-godot/godot-ai) | Живой редактор и игра: логи с курсором, запуск, скриншоты, ввод, `next_frame`, тесты | ~3 тыс. ★, v4.3.0; v4 только для 4.7+, телеметрия по умолчанию включена |
+| [satelliteoflove/godot-mcp](https://github.com/satelliteoflove/godot-mcp) | Агент без зрения: заморозка времени, шаг до условия, состояние в JSON | ~175 ★, 4.5+; read- и write-инструменты разделены |
+| [Erodenn/godot-mcp-runtime](https://github.com/Erodenn/godot-mcp-runtime) | Без аддона в проекте: временный autoload, скриншоты и ввод | ~90 ★, v3.8.1 |
+| [Coding-Solo/godot-mcp](https://github.com/Coding-Solo/godot-mcp) | Только запуск и чтение вывода: `claude mcp add godot -- npx -y @coding-solo/godot-mcp` | ~6,1 тыс. ★, но последний коммит в апреле 2026 |
+| youichi-uda/godot-mcp-pro, GDAI MCP | — | Платные серверы |
+| ee0pdt/Godot-MCP, bradypp/godot-mcp | — | `[устарело]` |
 
 ## 13. Минимальный набор и порядок quality gates
 
 **Ключевые выводы**
-- Минимальный набор для любого GDScript-проекта: закреплённая версия Godot, `untyped_declaration = Error` и `directory_rules` в `project.godot`, GDScript Formatter (`--check` и `lint`), headless `--check-only` по всем скриптам, один тест-фреймворк (GUT или gdUnit4) с JUnit-отчётом, `.gitignore` и `.gitattributes` от редактора.
-- Порядок: дешёвые и быстрые проверки идут первыми, экспорт последним. Каждый шаг завершается ненулевым кодом при ошибке. Это проверено для `--check`, `lint`, `--check-only`, GUT, gdUnit4 и экспорта без пресета.
+- Минимальный набор для любого GDScript-проекта: закреплённая версия Godot, `untyped_declaration = Error` и `directory_rules` в `project.godot`, GDScript Formatter (`--check` и `lint`), проверка всех скриптов компилятором Godot (`check_scripts.sh` скилла), один тест-фреймворк (GUT или gdUnit4) с JUnit-отчётом, `.gitignore` и `.gitattributes` от редактора.
+- Порядок: дешёвые и быстрые проверки идут первыми, экспорт последним. Каждый шаг завершается ненулевым кодом при ошибке. Это проверено для `--check`, `lint`, `--check-only`, `check_scripts.sh`, GUT, gdUnit4 и экспорта без пресета.
 - gdlint из gdtoolkit добавляйте, если нужны настраиваемые правила имён и ограничения размера функций. gdradon подключайте для ревью сложности. Профилирование и MCP в CI не нужны.
 
 | Ситуация | Инструменты |
 |---|---|
-| Всегда | Godot 4.7.2 (gdvm или setup-godot), GDScript Formatter, `--check-only`, GUT или gdUnit4, предупреждения в `project.godot`, `.gitignore` и `.gitattributes` |
+| Всегда | Godot 4.7.2 (gdvm или setup-godot), GDScript Formatter, `check_scripts.sh`, GUT или gdUnit4, предупреждения в `project.godot`, `.gitignore` и `.gitattributes` |
 | Командный проект | + pre-commit с форматтером, VS Code godot-tools или Rider, JUnit-отчёты в PR |
 | Строгая типизация | + `unsafe_*` = Warn или Error, `inferred_declaration` по вкусу, `return_value_discarded` = Warn |
 | Аддон для публикации | + `directory_rules` с правилом включения для своего аддона, тесты на нескольких версиях Godot (матрица), `--doctool --gdscript-docs` |
@@ -362,7 +366,7 @@ timeout 600 godot --headless --path . -s addons/gut/gut_cmdln.gd \
 gdscript-formatter --check -x addons .                # 1. формат (exit 1, если нужно переформатировать)
 gdscript-formatter lint -x addons .                   # 2. стиль и имена
 godot --headless --path . --import                    # 3. кеш .godot/ и class_name (код выхода не показатель)
-GODOT=godot ./check_scripts.sh                        # 4. --check-only по всем .gd (scripts/check_scripts.sh скилла)
+GODOT=godot ./check_scripts.sh                        # 4. компиляция всех .gd (scripts/check_scripts.sh скилла)
 mkdir -p reports                                      # JUnit-файл не создастся без каталога (проверено)
 godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://test -ginclude_subdirs -gexit \
       -gjunit_xml_file=res://reports/gut-junit.xml    # 5. тесты (или runtest.sh для gdUnit4)
@@ -438,13 +442,10 @@ jobs:
       - name: Parse/type check all scripts
         shell: bash
         run: |
-          fail=0
-          while IFS= read -r -d '' f; do
-            if ! out=$(godot --headless --path . --check-only --script "res://${f#./}" 2>&1); then
-              echo "::error file=${f#./}::GDScript check failed"; echo "$out"; fail=1
-            fi
-          done < <(find . -name '*.gd' -not -path './.godot/*' -not -path './addons/*' -print0)
-          exit $fail
+          # tools/check_scripts.gd — копия scripts/check_scripts.gd из скилла
+          find . -type f -name '*.gd' -not -path './.godot/*' -not -path './addons/*' -print0 \
+            | sed -z 's|^\./|res://|' \
+            | xargs -0 -r -n 200 godot --headless --path . -s res://tools/check_scripts.gd --
       - name: Tests (GUT)
         run: |
           mkdir -p reports
