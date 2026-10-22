@@ -187,7 +187,7 @@ func spawn(stats: EnemyStats) -> void:
 |---|---|---|
 | [Scene organization](https://docs.godotengine.org/en/stable/tutorials/best_practices/scene_organization.html) | документация Godot, живой | Внедрение через методы, `Callable`, ссылки и `NodePath` |
 | [Chickensoft GameDemo](https://github.com/chickensoft-games/GameDemo) | Chickensoft, C# | AutoInject (провайдеры в дереве), LogicBlocks, тесты с подменой узлов. Идеи переносимы в GDScript |
-| [Arca DI container](https://store.godotengine.org/asset/tenebris/arca-di-container/) | tenebris | DI-контейнер в духе Zenject для дерева сцен; MIT, Godot 4.6, [исходники](https://github.com/tenebris-soul/Arca), активен в 2026, но пользователей мало |
+| [Arca DI container](https://github.com/tenebris-soul/Arca) | tenebris | DI-контейнер в духе Zenject для дерева сцен; MIT, Godot 4.6, последний push в августе 2026, пользователей мало. Страница в Asset Store в октябре 2026 отвечает 403, похоже, ассет снят |
 
 ## Resources как данные и конфигурация
 

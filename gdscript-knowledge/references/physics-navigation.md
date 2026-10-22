@@ -373,7 +373,7 @@ func _on_velocity_computed(safe_velocity: Vector2) -> void:
   - асинхронные карта и регионы (по умолчанию): после одного `await physics_frame` путь пуст. Первый `map_changed` приходит на 2-м физическом кадре, но регион в эту итерацию ещё не попал, и путь всё равно пуст. Путь появляется только после второго `map_changed`, на 4–5-м кадре;
   - `region_use_async_iterations = false`: путь появляется с 3-го кадра;
   - обе асинхронности выключены: путь с 2-го кадра, то есть классическое «через кадр».
-- Надёжный способ: ждать `map_changed`, пока запрос не вернёт непустой путь (с ограничением попыток), либо сравнивать `region_get_iteration_id(region_rid) > 0` и следующую итерацию карты ([PR #104826](https://github.com/godotengine/godot/pull/104826)). Для агентов — задавать цель через `call_deferred` и повторять её на `map_changed`.
+- Надёжный способ: повторять запрос каждый физический кадр с лимитом кадров, пока он не вернёт непустой путь, либо сравнивать `region_get_iteration_id(region_rid) > 0` и следующую итерацию карты ([PR #104826](https://github.com/godotengine/godot/pull/104826)). Для агентов — задавать цель через `call_deferred` и повторять её на `map_changed`.
 - `map_force_update()` устарел, с асинхронными обновлениями он несовместим ([NavigationServer2D](https://docs.godotengine.org/en/stable/classes/class_navigationserver2d.html)). Для детерминированных тестов в CI отключите обе `*_use_async_iterations` в настройках тестового проекта.
 
 ```gdscript
@@ -382,14 +382,19 @@ func _ready():
 	await get_tree().physics_frame
 	path = NavigationServer2D.map_get_path(map, a, b, true)   # на 4.7.2 по умолчанию — пусто
 
-# Хорошо: ждём, пока карта действительно содержит регион (проверено на 4.7.2)
-func wait_nav_ready(map: RID, probe_from: Vector2, probe_to: Vector2, max_waits := 10) -> bool:
-	for i in max_waits:
+# Хорошо: ждём, пока карта действительно содержит регион (проверено на 4.7.2:
+# с регионом — true на 4-м физическом кадре, на карте без региона — false).
+# Лимит в физических кадрах, а не в map_changed: если карта уже синхронизирована,
+# а путь пуст (нет региона, не совпали navigation_layers), сигнал больше не придёт.
+func wait_nav_ready(map: RID, probe_from: Vector2, probe_to: Vector2, max_frames := 30) -> bool:
+	for i in max_frames:
 		if not NavigationServer2D.map_get_path(map, probe_from, probe_to, false).is_empty():
 			return true
-		await NavigationServer2D.map_changed
+		await get_tree().physics_frame
 	return false
 ```
+
+Вариант «в цикле `await NavigationServer2D.map_changed` с лимитом попыток» виснет навсегда, если путь пуст из-за конфигурации: после синхронизации `map_changed` больше не приходит, и лимит попыток не срабатывает (проверено на 4.7.2).
 
 ---
 
@@ -470,7 +475,7 @@ func on_unit_moved(old_cell: Vector2i, new_cell: Vector2i) -> void:
 | Телепорт без `reset_physics_interpolation()` | «Шлейф» через полкарты | Сброс после установки трансформа |
 | Подъём тиков без подъёма `max_physics_steps_per_frame` | Замедление игры при падении FPS | Поднимать оба, тики кратно 60 |
 | `DEFAULT` в `physics_engine` в расчёте на Jolt | В 4.7.2 это GodotPhysics3D | Явное значение `"Jolt Physics"` |
-| Путь в `_ready` или через один кадр | На 4.7 карта ещё пуста | `map_changed` + проверка результата |
+| Путь в `_ready` или через один кадр | На 4.7 карта ещё пуста | Повтор запроса по физическим кадрам с лимитом, пока путь не станет непустым |
 | `target_position =` каждый кадр | Перестроение пути каждый тик | Только при заметном смещении цели |
 | `NavigationLink` без своей логики прохода | Агент идёт «по воздуху» | Перехват в конце ссылки: прыжок, телепорт |
 | Navmesh для клеточной доски | Асинхронность, пиксельные допуски | `AStarGrid2D` |
@@ -503,7 +508,7 @@ func on_unit_moved(old_cell: Vector2i, new_cell: Vector2i) -> void:
 19. Отладочный прогон с `--debug-collisions` / Visible Collision Shapes; мониторы `ACTIVE_OBJECTS` и `COLLISION_PAIRS` в норме.
 20. Навигация: `cell_size` navmesh совпадает с картой, `agent_radius` — с реальным радиусом коллизии.
 21. Runtime-запекание идёт из форм коллизий и асинхронно, парсинг — в главном потоке.
-22. Первый запрос пути ждёт `map_changed` с проверкой результата, а не один кадр.
+22. Первый запрос пути повторяется по физическим кадрам с лимитом, пока не вернёт непустой путь, а не ждёт один кадр или `map_changed` без лимита.
 23. Агент: сначала `is_navigation_finished()`, `get_next_path_position()` раз за кадр, дистанции подобраны под скорость.
 24. Избегание: движение в `velocity_computed`; препятствия выбраны осознанно (статические или динамические); `NavigationLink` обрабатывается игровой логикой.
 25. Путь перезапрашивается по смещению цели или таймеру, не каждый кадр.

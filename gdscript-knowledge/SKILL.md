@@ -1,6 +1,6 @@
 ---
 name: gdscript-knowledge
-description: Knowledge base and workflow for the Godot 4 engine and GDScript: scenes, nodes and the scene tree, signals, resources and import, 2D/3D rendering, physics, navigation, UI, input, animation, audio, project settings, export, and a catalog of addons and plugins. Covers 2D/3D games, UI apps, card and turn-based games, AI, procgen, editor plugins, multiplayer, shaders, web, mobile, C# and GDExtension (godot-rust). Use when writing or reviewing GDScript, structuring scenes, choosing nodes or engine settings, picking, vetting or installing Godot addons (Asset Store, Dialogue Manager, LimboAI, Phantom Camera, Terrain3D, netfox, GodotSteam), connecting AI agents to Godot (MCP servers, headless CLI, LSP), setting up tooling (GUT, gdUnit4, CI), profiling or optimizing Godot, or picking books and courses. Includes docs and addons verified on Godot 4.7.2, script-check, addon-smoke and benchmark scripts, and a pipeline with tests, review and evidence-based optimization.
+description: Knowledge base and workflow for Godot 4 and GDScript. Use for any question about Godot or GDScript, even one that looks quick to answer from memory: writing or reviewing .gd scripts, scenes and nodes, signals and await, resources and import, rendering, physics, navigation, UI, input, animation, audio, export, web and mobile, editor plugins, multiplayer, shaders, C# and GDExtension (godot-cpp, godot-rust); choosing nodes, settings or addons; tooling (GUT, gdUnit4, formatter, CI, headless CLI, MCP); profiling and optimizing; books and courses. Also use for symptoms: Godot error text (previously freed, Invalid access to property, Identifier not declared, Parse Error), a signal that never fires, a hanging loading screen, jitter or tunneling, low FPS with many nodes, memory growth, black screen after export, slow import. Includes docs and ~250 addons verified on Godot 4.7.2, script-check, addon-smoke and benchmark scripts, and a pipeline with tests, review and evidence-based optimization.
 ---
 
 # Godot 4 и GDScript: библиотека знаний и пайплайн
@@ -27,7 +27,7 @@ description: Knowledge base and workflow for the Godot 4 engine and GDScript: sc
 | Control и контейнеры, темы, текст, порядок обработки ввода, `mouse_filter`, фокус, InputMap, разрешения и hiDPI, drag-and-drop, доступность | [references/ui-input.md](references/ui-input.md) |
 | AnimationPlayer, AnimationTree, Tween, скелеты и IK, аудиошины, плееры, типы AudioStream, интерактивная музыка | [references/animation-audio.md](references/animation-audio.md) |
 | Настройки проекта, feature tags, приёмы работы в редакторе, отладчик, пресеты и фильтры экспорта, особенности платформ, чеклист релиза | [references/project-export.md](references/project-export.md) |
-| Особенности области: 2D, 3D, UI, карточные и пошаговые игры, ИИ, процедурка, диалоги, шейдеры, платформы, C# и GDExtension | [references/domains.md](references/domains.md) |
+| Особенности области: 2D, 3D, UI, пошаговые и настольные игры, ИИ, процедурка, диалоги, шейдеры, платформы, C# и GDExtension; таблица «с чего начать» по жанрам — от шутеров и гонок до головоломок и idle | [references/domains.md](references/domains.md) |
 
 **Код и процесс**
 
@@ -38,7 +38,7 @@ description: Knowledge base and workflow for the Godot 4 engine and GDScript: sc
 | Игра тормозит: техника по симптому, профилирование, бенчмарки | [references/performance.md](references/performance.md) — начните с таблицы «Симптом → техника → источник» |
 | Типизация, стиль, сигналы, `class_name`, аннотации, что нового в 4.x, паттерны, чеклист ревью кода | [references/idioms-patterns.md](references/idioms-patterns.md) |
 | Сигналы, `await`, `call_deferred`, потоки, `WorkerThreadPool`, HTTP, мультиплеер и RPC | [references/signals-async-threads.md](references/signals-async-threads.md) |
-| Книги, курсы, каналы, открытые проекты, маршрут обучения | [references/books.md](references/books.md) |
+| Книги, курсы, каналы, открытые проекты, маршрут обучения | [references/books.md](references/books.md). Не читайте его целиком: на «что почитать» и «с чего начать» отвечайте по разделам «[Must-read](references/books.md#must-read)» и «[Маршрут по уровням](references/books.md#маршрут-по-уровням)» (Read с `offset`/`limit` по номерам строк из Grep заголовков), остальные разделы открывайте только под конкретную тему |
 
 **Аддоны и инструменты для агента**
 
@@ -103,6 +103,7 @@ mkdir -p reports && godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=r
 **При оптимизации:**
 
 - Сначала замер, потом правка. Без базовой линии нельзя сказать, что код стал быстрее.
+- До первой правки измерьте шум: снимите базу дважды (A/A) и сравните. Медианы из разных процессов Godot на одной машине могут расходиться на десятки процентов, поэтому эффекты меньше трёх дрейфов A/A сравнивайте чередованием прогонов ([пайплайн](references/pipeline.md#этап-7-базовый-замер-и-профиль)).
 - Бинарник редактора — debug-сборка. Сравнивайте варианты одним и тем же бинарником, а абсолютные цифры берите из release-экспорта.
 - Ищите технику по симптому в [performance.md](references/performance.md) и в справочнике нужной системы движка. Указывайте источник рядом с правкой.
 - Принимайте правку, только если бенчмарк показал значимый выигрыш, а тесты остались зелёными.
